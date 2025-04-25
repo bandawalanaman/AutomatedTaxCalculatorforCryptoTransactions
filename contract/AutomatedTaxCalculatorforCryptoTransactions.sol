@@ -15,6 +15,8 @@ contract CryptoTaxCalculator {
     event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
     event Paused();
     event Unpaused();
+    event OwnershipRenounced();
+    event EmergencyWithdrawal(address indexed to, uint256 amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Unauthorized");
@@ -79,4 +81,36 @@ contract CryptoTaxCalculator {
     function getContractSummary() external view returns (address currentOwner, uint256 baseRate, bool isPaused) {
         return (owner, taxRateBasisPoints, paused);
     }
+
+    function estimateNetAmount(uint256 _amount) external view returns (uint256 netAmount, uint256 taxAmount) {
+        require(_amount > 0, "Amount must be positive");
+        uint256 rate = userTaxRates[msg.sender] > 0 ? userTaxRates[msg.sender] : taxRateBasisPoints;
+        taxAmount = (_amount * rate) / 10000;
+        netAmount = _amount - taxAmount;
+    }
+
+    function isCustomRateSet(address _user) external view returns (bool) {
+        return userTaxRates[_user] > 0;
+    }
+
+    function getAllInfoForUser(address _user) external view returns (uint256 effectiveRate, bool hasCustomRate) {
+        effectiveRate = userTaxRates[_user] > 0 ? userTaxRates[_user] : taxRateBasisPoints;
+        hasCustomRate = userTaxRates[_user] > 0;
+    }
+
+    function renounceOwnership() external onlyOwner {
+        emit OwnershipRenounced();
+        owner = address(0);
+    }
+
+    // Only for emergency recovery of accidentally sent funds
+    function emergencyWithdraw(address payable _to) external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance to withdraw");
+        _to.transfer(balance);
+        emit EmergencyWithdrawal(_to, balance);
+    }
+
+    // Accept ETH just in case someone sends it
+    receive() external payable {}
 }

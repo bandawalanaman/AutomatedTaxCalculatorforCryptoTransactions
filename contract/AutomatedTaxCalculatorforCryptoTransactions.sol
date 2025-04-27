@@ -148,4 +148,46 @@ contract CryptoTaxCalculator {
     }
 
     receive() external payable {}
+
+//some new functions added in this code  for deposit and withdraw ,tax estimations
+
+    function deposit() external payable whenNotPaused {
+        require(msg.value > 0, "Must send some Ether");
+    }
+
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function updateUserTaxRateSelf(uint256 _rate) external whenNotPaused {
+        require(_rate <= 10000, "Rate must be <= 100%");
+        userTaxRates[msg.sender] = _rate;
+        emit UserTaxRateSet(msg.sender, _rate);
+    }
+
+    function withdraw(address payable _to, uint256 _amount) external onlyOwner {
+        require(_amount > 0, "Amount must be positive");
+        require(address(this).balance >= _amount, "Not enough balance");
+        _to.transfer(_amount);
+    }
+
+    function calculateTaxForOtherUser(address _user, uint256 _amount) external view returns (uint256) {
+        require(_amount > 0, "Amount must be positive");
+        uint256 rate = userTaxRates[_user] > 0 ? userTaxRates[_user] : taxRateBasisPoints;
+        return (_amount * rate) / 10000;
+    }
+
+    function setMultipleUserSameRate(address[] calldata _users, uint256 _rate) external onlyOwner {
+        require(_rate <= 10000, "Rate must be <= 100%");
+        for (uint256 i = 0; i < _users.length; i++) {
+            userTaxRates[_users[i]] = _rate;
+            emit UserTaxRateSet(_users[i], _rate);
+        }
+    }
+
+    function restoreDefaults() external onlyOwner {
+        taxRateBasisPoints = 1500; // Restore 15%
+        paused = false;
+        emergencyWithdrawEnabled = true;
+    }
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 contract CryptoTaxCalculator {
     address public owner;
-    uint256 public taxRateBasisPoints = 1500; // Default = 15%
+    uint256 public taxRateBasisPoints = 1500; // Default = 15%.
     bool public paused = false;
     bool public emergencyWithdrawEnabled = true;
 
